@@ -1,0 +1,29 @@
+# Web framework
+Flask==3.0.3
+gunicorn==23.0.0
+
+# Forms, auth, CSRF
+Flask-Login==0.6.3
+Flask-WTF==1.2.1
+WTForms==3.1.2
+
+# Validation
+pydantic==2.9.2
+
+# Serial
+pyserial==3.5
+
+# Scheduling
+APScheduler==3.10.4
+
+# Outbound HTTP (for future Perry REST calls if needed)
+requests==2.32.3
+
+# Config / env
+python-dotenv==1.0.1
+
+# Logging
+structlog==24.4.0
+
+# Password hashing
+argon2-cffi==23.1.0

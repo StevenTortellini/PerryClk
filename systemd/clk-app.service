@@ -1,0 +1,32 @@
+[Unit]
+Description=CLK lightning countdown clock controller
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=dialout
+WorkingDirectory=/home/pi/clk-app
+EnvironmentFile=/home/pi/clk-app/.env
+ExecStart=/home/pi/clk-app/venv/bin/gunicorn \
+    --workers 2 \
+    --threads 2 \
+    --bind 0.0.0.0:8080 \
+    --access-logfile - \
+    --error-logfile - \
+    wsgi:app
+Restart=on-failure
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=read-only
+
+# Allow writes to the database and log directory
+ReadWritePaths=/home/pi/clk-app /var/lib/clk-app
+
+[Install]
+WantedBy=multi-user.target
