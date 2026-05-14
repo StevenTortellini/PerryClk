@@ -1,0 +1,48 @@
+# Default: auto-detect text files and normalize to LF in the repo,
+# convert to platform-native on checkout for unknown text
+* text=auto eol=lf
+
+# Explicit LF for everything that runs on Linux/Mac
+*.py        text eol=lf
+*.sh        text eol=lf
+*.service   text eol=lf
+*.conf      text eol=lf
+*.cfg       text eol=lf
+*.ini       text eol=lf
+*.toml      text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.json      text eol=lf
+*.html      text eol=lf
+*.jinja     text eol=lf
+*.j2        text eol=lf
+*.css       text eol=lf
+*.js        text eol=lf
+*.sql       text eol=lf
+*.md        text eol=lf
+*.txt       text eol=lf
+*.env       text eol=lf
+.env*       text eol=lf
+Dockerfile  text eol=lf
+*.gitignore text eol=lf
+Makefile    text eol=lf
+
+# CRLF for files that genuinely need it (Windows batch/PowerShell)
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+*.ps1       text eol=crlf
+
+# Binary files — don't touch
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.pdf       binary
+*.zip       binary
+*.tar       binary
+*.tar.gz    binary
+*.db        binary
+*.sqlite    binary
+*.sqlite3   binary
+*.pyc       binary
