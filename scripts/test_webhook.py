@@ -30,14 +30,52 @@ SECRET = os.environ.get("PERRY_WEBHOOK_SECRET", "")
 
 PAYLOADS = {
     "alert": {
-        "event": "lightning.detected",
-        "zone_id": "test-zone",
-        "distance_miles": 8.4,
-        "severity": "warning",
+        "event_id": "test-event-alert-001",
+        "event_type": "DELAY",
+        "time": "2025-07-18T11:06:26.238",
+        "version": "1.0",
+        "payload": {
+            "customer_id": 1,
+            "location_id": "test-location-001",
+            "location_name": "Test Location",
+            "message": "Lightning strike 8.4 miles from Test Location.",
+            "additional_message": "Seek shelter immediately!",
+            "value": 8.4,
+            "value_units": "mi",
+            "condition_type": "LR1",
+            "policies": [
+                {
+                    "type": "LR1",
+                    "threshold": 15,
+                    "threshold_units": "mi",
+                    "all_clear_minutes": 30,
+                }
+            ],
+        },
     },
     "clear": {
-        "event": "lightning.cleared",
-        "zone_id": "test-zone",
+        "event_id": "test-event-clear-001",
+        "event_type": "ALL_CLEAR",
+        "time": "2025-07-18T11:37:08.835",
+        "version": "1.0",
+        "payload": {
+            "customer_id": 1,
+            "location_id": "test-location-001",
+            "location_name": "Test Location",
+            "message": "30 minute all clear, 15 miles from Test Location.",
+            "additional_message": None,
+            "value": 0,
+            "value_units": "mi",
+            "condition_type": "LR1",
+            "policies": [
+                {
+                    "type": "LR1",
+                    "threshold": 15,
+                    "threshold_units": "mi",
+                    "all_clear_minutes": 30,
+                }
+            ],
+        },
     },
 }
 
@@ -50,8 +88,8 @@ def sign(body: bytes) -> str:
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("kind", choices=["alert", "clear"])
-    p.add_argument("--seconds", type=int, default=None,
-                   help="Override countdown duration (alert only)")
+    p.add_argument("--minutes", type=int, default=None,
+                   help="Override all_clear_minutes in the test payload (alert only)")
     p.add_argument("--url", default="http://localhost:8080/webhook/perry")
     p.add_argument("--bad-sig", action="store_true",
                    help="Send an invalid signature (should get 401)")
@@ -60,9 +98,9 @@ def main() -> None:
     if not SECRET:
         sys.exit("PERRY_WEBHOOK_SECRET not set in .env")
 
-    payload = PAYLOADS[args.kind].copy()
-    if args.kind == "alert" and args.seconds is not None:
-        payload["countdown_seconds"] = args.seconds
+    payload = json.loads(json.dumps(PAYLOADS[args.kind]))  # deep copy
+    if args.kind == "alert" and args.minutes is not None:
+        payload["payload"]["policies"][0]["all_clear_minutes"] = args.minutes
 
     body = json.dumps(payload).encode()
     signature = "sha256=deadbeef" if args.bad_sig else sign(body)

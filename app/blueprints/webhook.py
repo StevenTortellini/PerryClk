@@ -53,7 +53,7 @@ def perry_webhook():
     worker = get_worker()
 
     if kind == AlertKind.LIGHTNING_ALERT:
-        seconds = event.countdown_seconds or int(
+        seconds = event.countdown_seconds() or int(
             get_setting(db, "default_countdown_seconds", "1800") or "1800"
         )
         worker.enqueue(Job(
@@ -67,5 +67,5 @@ def perry_webhook():
         worker.enqueue(Job(event_id=event_id, action="clear_to_time"))
         return jsonify(status="queued", action="clear_to_time"), 202
 
-    log.info("webhook.unknown_event", event=event.event)
+    log.info("webhook.unknown_event", event=event.event_type)
     return jsonify(status="ignored", reason="unknown event type"), 200

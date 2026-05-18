@@ -1,16 +1,34 @@
 """
 Perry Weather webhook handling.
 
-Perry Weather sends signed HTTPS POSTs when weather conditions in a configured
-zone change. This module:
+Perry Weather sends signed HTTPS POSTs when a configured weather policy
+threshold is exceeded (DELAY) or clears (ALL_CLEAR).
 
-  * verifies the HMAC signature on incoming requests
-  * validates the JSON payload shape
-  * maps payloads to the actions our worker needs to take
-
-Until the exact payload shape is confirmed from Perry's API docs, we accept
-a flexible schema and adapt as needed. Update `PerryEvent` once you have
-real payloads in hand.
+Payload structure (Perry Webhooks v1.0):
+  {
+    "event_id":   "<uuid>",
+    "event_type": "DELAY" | "ALL_CLEAR",
+    "time":       "<ISO-8601>",
+    "version":    "1.0",
+    "payload": {
+      "customer_id":        <int>,
+      "location_id":        "<uuid>",
+      "location_name":      "<str>",
+      "message":            "<str>",
+      "additional_message": "<str|null>",
+      "value":              <float>,   # e.g. distance in miles
+      "value_units":        "<str>",   # e.g. "mi"
+      "condition_type":     "<str>",   # e.g. "LR1"
+      "policies": [
+        {
+          "type":            "<str>",
+          "threshold":       <float>,
+          "threshold_units": "<str>",
+          "all_clear_minutes": <int>   # countdown duration source
+        }
+      ]
+    }
+  }
 """
 from __future__ import annotations
 
@@ -28,30 +46,35 @@ class AlertKind(str, Enum):
     UNKNOWN = "unknown"
 
 
+class Policy(BaseModel):
+    type: str
+    threshold: float
+    threshold_units: str
+    all_clear_minutes: int
+
+
+class PerryPayload(BaseModel):
+    customer_id: int
+    location_id: str
+    location_name: str
+    message: str
+    additional_message: Optional[str] = None
+    value: float = 0.0
+    value_units: str = ""
+    condition_type: str = ""
+    policies: list[Policy] = Field(default_factory=list)
+
+
 class PerryEvent(BaseModel):
-    """
-    Loose schema for a Perry Weather webhook event.
+    """Validated Perry Weather webhook event (v1.0 schema)."""
 
-    Real Perry payloads will include things like zone ID, severity, distance,
-    timestamps, and an event type field. Replace the field names below with
-    whatever Perry actually sends; the worker only cares about `kind` and
-    `countdown_seconds`.
-    """
+    event_id: str
+    event_type: str          # "DELAY" or "ALL_CLEAR"
+    time: str
+    version: str = "1.0"
+    payload: PerryPayload
 
-    # The raw event type from Perry, e.g. "lightning.detected", "lightning.cleared".
-    # Default mapping logic lives in `kind_from_raw()`.
-    event: str = Field(..., description="Raw Perry event type string")
-
-    # Optional fields that Perry may include
-    zone_id: Optional[str] = None
-    distance_miles: Optional[float] = None
-    severity: Optional[str] = None
-    countdown_seconds: Optional[int] = Field(
-        default=None,
-        description="Recommended countdown duration if Perry provides one",
-    )
-
-    # Keep the full payload around for the event log
+    # Keep the full raw body for the event log
     raw: dict[str, Any] = Field(default_factory=dict)
 
     @classmethod
@@ -59,12 +82,21 @@ class PerryEvent(BaseModel):
         return cls(raw=body, **{k: v for k, v in body.items() if k in cls.model_fields})
 
     def kind(self) -> AlertKind:
-        ev = (self.event or "").lower()
-        if "clear" in ev or "all-clear" in ev or "allclear" in ev:
-            return AlertKind.ALL_CLEAR
-        if "lightning" in ev or "alert" in ev or "strike" in ev:
+        et = (self.event_type or "").upper()
+        if et == "DELAY":
             return AlertKind.LIGHTNING_ALERT
+        if et == "ALL_CLEAR":
+            return AlertKind.ALL_CLEAR
         return AlertKind.UNKNOWN
+
+    def countdown_seconds(self) -> Optional[int]:
+        """
+        Return the countdown duration in seconds derived from the first policy's
+        all_clear_minutes, or None if no policy is present.
+        """
+        if self.payload.policies:
+            return self.payload.policies[0].all_clear_minutes * 60
+        return None
 
 
 def verify_signature(secret: str, body: bytes, signature_header: str) -> bool:
@@ -72,7 +104,6 @@ def verify_signature(secret: str, body: bytes, signature_header: str) -> bool:
     Verify the HMAC-SHA256 signature Perry sends in the X-Perry-Signature header.
 
     Signature format is assumed to be `sha256=<hex>` (Stripe/GitHub style).
-    Adjust once Perry's docs confirm the format.
     """
     if not secret or not signature_header:
         return False
