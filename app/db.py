@@ -47,7 +47,7 @@ DEFAULT_SETTINGS = {
     "rs485_baud": "9600",
     "clock_address": "1",
     "default_countdown_seconds": "1800",
-    "lightning_alert_action": "start_countdown",  # or 'custom_message'
+    "delay_action": "start_countdown",  # or 'custom_message'
     "all_clear_action": "clear_to_time",
 }
 

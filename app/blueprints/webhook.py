@@ -52,7 +52,7 @@ def perry_webhook():
 
     worker = get_worker()
 
-    if kind == AlertKind.LIGHTNING_ALERT:
+    if kind == AlertKind.DELAY:
         seconds = event.countdown_seconds() or int(
             get_setting(db, "default_countdown_seconds", "1800") or "1800"
         )
