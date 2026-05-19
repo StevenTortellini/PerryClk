@@ -2,6 +2,11 @@
 from __future__ import annotations
 
 from datetime import datetime
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
+
 from flask import Blueprint, redirect, render_template, url_for
 from flask_login import login_required
 
@@ -29,7 +34,8 @@ def dashboard():
         """
     ).fetchall()
     settings = _get_settings(db)
-    now = datetime.now()
+    tz = ZoneInfo(settings.get("timezone", "UTC"))
+    now = datetime.now(tz)
     return render_template(
         "dashboard.html",
         events=rows,
