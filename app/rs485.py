@@ -123,28 +123,29 @@ def build_write_time(address: int, dt: datetime) -> bytes:
     """
     Sync the clock's internal RTC to *dt*.
 
-    Frame layout:
-        3A <addr> 74 08 <yr_hi> <yr_lo> <mo> <day> <hr> <min> <sec> <wday> <cksum> 0A
+    Frame layout (9 data bytes):
+        3A <addr> 74 09 FF <yr_hi> <yr_lo> <mo> <day> <hr> <min> <sec> <wday> <cksum> 0A
 
-    yr_hi / yr_lo  : century and 2-digit year  (2025 → 20, 25)
-    mo             : 1–12
-    day            : 1–31
-    hr             : 0–23
-    min            : 0–59
-    sec            : 0–59
-    wday           : 0=Sunday, 1=Monday … 6=Saturday
-                     (Python weekday() is 0=Monday, so we rotate by 1)
+    The leading 0xFF is the SN_ALL serial-number byte required by FN_WRITE_TIME,
+    mirroring the SN byte used in every FN_WRITE_GENERAL frame.  Without it the
+    clock reads the year-high byte as the hour, shifting all fields left by one.
+
+    hr   : sent in 12-hour format (1–12) to match the clock display mode.
+    wday : 0=Sunday, 1=Monday … 6=Saturday
+           (Python weekday() is 0=Monday, so we rotate by 1)
     """
-    wday = (dt.weekday() + 1) % 7   # Mon=0 in Python → Sun=0, Mon=1, …, Sat=6
+    wday   = (dt.weekday() + 1) % 7   # Mon=0 in Python → Sun=0, Mon=1, …, Sat=6
+    hr_12  = dt.hour % 12 or 12       # 0→12, 13→1, 14→2, …
     body = bytes([
         address,
         FN_WRITE_TIME,
-        0x08,               # 8 data bytes
+        0x09,               # 9 data bytes: SN + yr_hi + yr_lo + mo + day + hr + min + sec + wday
+        0xFF,               # SN_ALL — write all time fields
         dt.year // 100,     # e.g. 20
-        dt.year % 100,      # e.g. 25
+        dt.year % 100,      # e.g. 26
         dt.month,
         dt.day,
-        dt.hour,
+        hr_12,              # 12-hour (1–12)
         dt.minute,
         dt.second,
         wday,
