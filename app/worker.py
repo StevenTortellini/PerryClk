@@ -71,6 +71,22 @@ class Worker:
     def enqueue(self, job: Job) -> None:
         self.q.put(job)
 
+    def reconfigure(self, port: str, baud: int, clock_address: int) -> None:
+        """
+        Hot-swap the serial port and clock address without restarting the thread.
+        Called by the API when RS-485 settings are saved.
+        """
+        log.info("worker.reconfigure", port=port, baud=baud, address=clock_address)
+        self.driver.close()
+        self.driver.port = port
+        self.driver.baud = baud
+        self.clock_address = clock_address
+        try:
+            self.driver.open()
+        except Exception as e:
+            log.error("worker.reconfigure_open_failed", error=str(e))
+            # Worker loop will retry on next job
+
     # --- main loop ---
 
     def _run(self) -> None:
