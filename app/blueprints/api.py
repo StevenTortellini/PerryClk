@@ -123,7 +123,7 @@ def update_time_settings():
     # 1. Timezone
     tz = body.get("timezone", "").strip()
     if tz:
-        rc, err = _run(["timedatectl", "set-timezone", tz])
+        rc, err = _run(["sudo", "timedatectl", "set-timezone", tz])
         if rc != 0:
             errors.append(f"set-timezone: {err}")
 
@@ -131,8 +131,6 @@ def update_time_settings():
     ntp_server = body.get("ntp_server", "").strip()
     if ntp_server:
         conf = f"[Time]\nNTP={ntp_server}\n"
-        rc, err = _run(["sudo", "tee", "/etc/systemd/timesyncd.conf"],)
-        # tee doesn't accept stdin via subprocess.run list form — use shell=False + input
         r = subprocess.run(
             ["sudo", "tee", "/etc/systemd/timesyncd.conf"],
             input=conf, text=True, capture_output=True
@@ -144,7 +142,7 @@ def update_time_settings():
 
     # 3. NTP on/off
     ntp_enabled = str(body.get("ntp_enabled", "1")) in ("1", "true", "True")
-    rc, err = _run(["timedatectl", "set-ntp", "true" if ntp_enabled else "false"])
+    rc, err = _run(["sudo", "timedatectl", "set-ntp", "true" if ntp_enabled else "false"])
     if rc != 0:
         errors.append(f"set-ntp: {err}")
 
@@ -153,19 +151,19 @@ def update_time_settings():
     manual_date = body.get("manual_date", "").strip()
     if manual_time or manual_date:
         # Disable NTP temporarily so timedatectl allows manual set
-        _run(["timedatectl", "set-ntp", "false"])
+        _run(["sudo", "timedatectl", "set-ntp", "false"])
         if manual_date and manual_time:
             time_str = f"{manual_date} {manual_time}"
         elif manual_date:
             time_str = f"{manual_date} 00:00:00"
         else:
             time_str = manual_time
-        rc, err = _run(["timedatectl", "set-time", time_str])
+        rc, err = _run(["sudo", "timedatectl", "set-time", time_str])
         if rc != 0:
             errors.append(f"set-time: {err}")
         # Re-enable NTP if it was on
         if ntp_enabled:
-            _run(["timedatectl", "set-ntp", "true"])
+            _run(["sudo", "timedatectl", "set-ntp", "true"])
 
     if errors:
         return jsonify(status="partial", errors=errors), 207

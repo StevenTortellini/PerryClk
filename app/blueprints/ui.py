@@ -1,6 +1,7 @@
 """HTML page routes."""
 from __future__ import annotations
 
+from datetime import datetime
 from flask import Blueprint, redirect, render_template, url_for
 from flask_login import login_required
 
@@ -28,7 +29,14 @@ def dashboard():
         """
     ).fetchall()
     settings = _get_settings(db)
-    return render_template("dashboard.html", events=rows, settings=settings)
+    now = datetime.now()
+    return render_template(
+        "dashboard.html",
+        events=rows,
+        settings=settings,
+        now=now.strftime("%H:%M:%S"),
+        now_iso=now.isoformat(),
+    )
 
 
 @bp.get("/settings")

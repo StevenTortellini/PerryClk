@@ -18,14 +18,14 @@
   </div>
   <div class="col">
     <div class="card-costum text-center">
-      <div class="labeltext"><i class="fas fa-stopwatch me-1"></i>Default Countdown</div>
-      <div class="labelvalue">{{ (settings.default_countdown_seconds|int // 60) }} min</div>
+      <div class="labeltext"><i class="fas fa-server me-1"></i>Host</div>
+      <div class="labelvalue">{{ request.host }}</div>
     </div>
   </div>
   <div class="col">
     <div class="card-costum text-center">
-      <div class="labeltext"><i class="fas fa-server me-1"></i>Host</div>
-      <div class="labelvalue">{{ request.host }}</div>
+      <div class="labeltext"><i class="fas fa-clock me-1"></i>Pi Time</div>
+      <div class="labelvalue" id="pi-clock">{{ now }}</div>
     </div>
   </div>
 </div>
@@ -107,4 +107,19 @@
 </div>
 
 <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+<script>
+  // Seed from Pi server time so timezone is correct, then tick client-side
+  var piTime = new Date("{{ now_iso }}");
+  var offset = piTime - Date.now();  // ms difference between Pi and browser
+
+  function tickClock() {
+    var t = new Date(Date.now() + offset);
+    var h = String(t.getHours()).padStart(2, '0');
+    var m = String(t.getMinutes()).padStart(2, '0');
+    var s = String(t.getSeconds()).padStart(2, '0');
+    document.getElementById('pi-clock').textContent = h + ':' + m + ':' + s;
+  }
+  tickClock();
+  setInterval(tickClock, 1000);
+</script>
 {% endblock %}
