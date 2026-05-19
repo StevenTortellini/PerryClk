@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}Settings — Time &amp; Date{% endblock %}
+{% block content %}
+
+<div class="mobileBg">
+  <h5 class="mb-1"><span class="bgBottom"><i class="fas fa-clock me-1"></i> Time &amp; Date</span></h5>
+  <p class="text-muted small mt-2 mb-2">
+    Timezone affects all event log timestamps. NTP keeps the Pi clock accurate automatically.
+    Use manual entry only if NTP is unavailable or the clock is wrong.
+  </p>
+  <div class="alert py-2 small mb-4" style="background:#fff3cd; border-left:4px solid #c0392b; color:#555;">
+    <i class="fas fa-triangle-exclamation me-1" style="color:#c0392b;"></i>
+    <strong>Pi Zero 2W has no hardware RTC.</strong>
+    On boot without internet the clock will be wrong until NTP syncs.
+    Ensure the Pi has internet access at startup, or connect a DS3231 RTC module for offline accuracy.
+  </div>
+
+  <form id="time-form" hx-post="/api/settings/time" hx-ext="json-enc" hx-swap="none"
+        hx-on::after-request="showSaved(event)">
+    <div class="row g-3">
+
+      <!-- Timezone & NTP -->
+      <div class="col-12">
+        <h6 class="text-danger text-uppercase fw-bold border-bottom pb-1">
+          <i class="fas fa-globe me-1"></i> Timezone &amp; NTP
+        </h6>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-semibold">Time zone</label>
+        {% set tz = settings.get('timezone', 'America/Chicago') %}
+        <select class="form-select" name="timezone">
+
+          <optgroup label="── UTC ──────────────────────────">
+            <option value="UTC"                          {% if tz == 'UTC' %}selected{% endif %}>UTC+0  (UTC)</option>
+          </optgroup>
+
+          <optgroup label="── Americas ─────────────────────">
+            <option value="America/New_York"             {% if tz == 'America/New_York' %}selected{% endif %}>UTC&#8209;5/&#8209;4  Eastern          EST/EDT</option>
+            <option value="America/Chicago"              {% if tz == 'America/Chicago' %}selected{% endif %}>UTC&#8209;6/&#8209;5  Central          CST/CDT</option>
+            <option value="America/Denver"               {% if tz == 'America/Denver' %}selected{% endif %}>UTC&#8209;7/&#8209;6  Mountain         MST/MDT</option>
+            <option value="America/Phoenix"              {% if tz == 'America/Phoenix' %}selected{% endif %}>UTC&#8209;7     Arizona          MST (no DST)</option>
+            <option value="America/Los_Angeles"          {% if tz == 'America/Los_Angeles' %}selected{% endif %}>UTC&#8209;8/&#8209;7  Pacific          PST/PDT</option>
+            <option value="America/Anchorage"            {% if tz == 'America/Anchorage' %}selected{% endif %}>UTC&#8209;9/&#8209;8  Alaska           AKST/AKDT</option>
+            <option value="Pacific/Honolulu"             {% if tz == 'Pacific/Honolulu' %}selected{% endif %}>UTC&#8209;10    Hawaii           HST (no DST)</option>
+            <option value="America/Toronto"              {% if tz == 'America/Toronto' %}selected{% endif %}>UTC&#8209;5/&#8209;4  Toronto          EST/EDT</option>
+            <option value="America/Vancouver"            {% if tz == 'America/Vancouver' %}selected{% endif %}>UTC&#8209;8/&#8209;7  Vancouver        PST/PDT</option>
+            <option value="America/Mexico_City"          {% if tz == 'America/Mexico_City' %}selected{% endif %}>UTC&#8209;6/&#8209;5  Mexico City      CST/CDT</option>
+            <option value="America/Bogota"               {% if tz == 'America/Bogota' %}selected{% endif %}>UTC&#8209;5     Bogotá           COT (no DST)</option>
+            <option value="America/Sao_Paulo"            {% if tz == 'America/Sao_Paulo' %}selected{% endif %}>UTC&#8209;3/&#8209;2  São Paulo        BRT/BRST</option>
+            <option value="America/Argentina/Buenos_Aires" {% if tz == 'America/Argentina/Buenos_Aires' %}selected{% endif %}>UTC&#8209;3     Buenos Aires     ART (no DST)</option>
+          </optgroup>
+
+          <optgroup label="── Europe ───────────────────────">
+            <option value="Europe/London"                {% if tz == 'Europe/London' %}selected{% endif %}>UTC+0/+1  London           GMT/BST</option>
+            <option value="Europe/Lisbon"                {% if tz == 'Europe/Lisbon' %}selected{% endif %}>UTC+0/+1  Lisbon           WET/WEST</option>
+            <option value="Europe/Paris"                 {% if tz == 'Europe/Paris' %}selected{% endif %}>UTC+1/+2  Paris/Berlin     CET/CEST</option>
+            <option value="Europe/Amsterdam"             {% if tz == 'Europe/Amsterdam' %}selected{% endif %}>UTC+1/+2  Amsterdam        CET/CEST</option>
+            <option value="Europe/Rome"                  {% if tz == 'Europe/Rome' %}selected{% endif %}>UTC+1/+2  Rome/Madrid      CET/CEST</option>
+            <option value="Europe/Helsinki"              {% if tz == 'Europe/Helsinki' %}selected{% endif %}>UTC+2/+3  Helsinki         EET/EEST</option>
+            <option value="Europe/Istanbul"              {% if tz == 'Europe/Istanbul' %}selected{% endif %}>UTC+3     Istanbul         TRT (no DST)</option>
+            <option value="Europe/Moscow"                {% if tz == 'Europe/Moscow' %}selected{% endif %}>UTC+3     Moscow           MSK (no DST)</option>
+          </optgroup>
+
+          <optgroup label="── Africa ───────────────────────">
+            <option value="Africa/Lagos"                 {% if tz == 'Africa/Lagos' %}selected{% endif %}>UTC+1     Lagos/W. Africa  WAT</option>
+            <option value="Africa/Cairo"                 {% if tz == 'Africa/Cairo' %}selected{% endif %}>UTC+2     Cairo            EET</option>
+            <option value="Africa/Johannesburg"          {% if tz == 'Africa/Johannesburg' %}selected{% endif %}>UTC+2     Johannesburg     SAST (no DST)</option>
+            <option value="Africa/Nairobi"               {% if tz == 'Africa/Nairobi' %}selected{% endif %}>UTC+3     Nairobi          EAT (no DST)</option>
+          </optgroup>
+
+          <optgroup label="── Asia ─────────────────────────">
+            <option value="Asia/Dubai"                   {% if tz == 'Asia/Dubai' %}selected{% endif %}>UTC+4     Dubai/UAE        GST (no DST)</option>
+            <option value="Asia/Karachi"                 {% if tz == 'Asia/Karachi' %}selected{% endif %}>UTC+5     Karachi          PKT (no DST)</option>
+            <option value="Asia/Kolkata"                 {% if tz == 'Asia/Kolkata' %}selected{% endif %}>UTC+5:30  Kolkata          IST (no DST)</option>
+            <option value="Asia/Dhaka"                   {% if tz == 'Asia/Dhaka' %}selected{% endif %}>UTC+6     Dhaka            BST (no DST)</option>
+            <option value="Asia/Bangkok"                 {% if tz == 'Asia/Bangkok' %}selected{% endif %}>UTC+7     Bangkok          ICT (no DST)</option>
+            <option value="Asia/Singapore"               {% if tz == 'Asia/Singapore' %}selected{% endif %}>UTC+8     Singapore        SGT (no DST)</option>
+            <option value="Asia/Shanghai"                {% if tz == 'Asia/Shanghai' %}selected{% endif %}>UTC+8     Shanghai         CST (no DST)</option>
+            <option value="Asia/Seoul"                   {% if tz == 'Asia/Seoul' %}selected{% endif %}>UTC+9     Seoul            KST (no DST)</option>
+            <option value="Asia/Tokyo"                   {% if tz == 'Asia/Tokyo' %}selected{% endif %}>UTC+9     Tokyo            JST (no DST)</option>
+          </optgroup>
+
+          <optgroup label="── Australia / Pacific ──────────">
+            <option value="Australia/Perth"              {% if tz == 'Australia/Perth' %}selected{% endif %}>UTC+8     Perth            AWST (no DST)</option>
+            <option value="Australia/Adelaide"           {% if tz == 'Australia/Adelaide' %}selected{% endif %}>UTC+9:30/+10:30  Adelaide  ACST/ACDT</option>
+            <option value="Australia/Sydney"             {% if tz == 'Australia/Sydney' %}selected{% endif %}>UTC+10/+11  Sydney/Melbourne  AEST/AEDT</option>
+            <option value="Pacific/Auckland"             {% if tz == 'Pacific/Auckland' %}selected{% endif %}>UTC+12/+13  Auckland    NZST/NZDT</option>
+          </optgroup>
+
+        </select>
+        <div class="form-text">Stored as IANA timezone name. UTC offset and DST are handled automatically.</div>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">NTP server</label>
+        <input class="form-control" name="ntp_server"
+               value="{{ settings.get('ntp_server', 'time.nist.gov') }}">
+      </div>
+      <div class="col-md-3 d-flex align-items-end pb-1">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="ntp_enabled" id="ntpEnabled"
+                 value="1" {% if settings.get('ntp_enabled', '1') == '1' %}checked{% endif %}>
+          <label class="form-check-label fw-semibold" for="ntpEnabled">
+            Enable NTP sync
+          </label>
+        </div>
+      </div>
+
+      <!-- Manual time/date — always visible -->
+      <div class="col-12 mt-2">
+        <h6 class="text-danger text-uppercase fw-bold border-bottom pb-1">
+          <i class="fas fa-pen-to-square me-1"></i> Manual Time &amp; Date
+        </h6>
+        <p class="text-muted small mt-1 mb-2">
+          Leave blank to keep the current value. Saving with values here sets the Pi clock directly
+          (overrides NTP for that moment).
+        </p>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">Time</label>
+        <input class="form-control" name="manual_time" placeholder="HH:MM:SS"
+               pattern="^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$">
+        <div class="form-text">24-hour, e.g. 14:30:00</div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">Date</label>
+        <input class="form-control" name="manual_date" placeholder="YYYY-MM-DD"
+               pattern="^\d{4}-\d{2}-\d{2}$">
+        <div class="form-text">e.g. 2026-05-19</div>
+      </div>
+      <div class="col-md-4 d-flex align-items-end">
+        <div class="text-muted small">
+          <i class="fas fa-circle-info me-1"></i>
+          Current Pi time is shown in the event log timestamps.
+        </div>
+      </div>
+
+    </div>
+    <div class="mt-4 d-flex align-items-center gap-3">
+      <button class="btn btn-danger" type="submit">
+        <i class="fas fa-floppy-disk me-1"></i> Save
+      </button>
+      <span id="savedMsg" class="text-success small" style="display:none;">
+        <i class="fas fa-check me-1"></i>Saved!
+      </span>
+    </div>
+  </form>
+</div>
+
+<script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+<script>
+  function showSaved(e) {
+    if (e.detail.successful) {
+      var el = document.getElementById('savedMsg');
+      el.style.display = 'inline';
+      setTimeout(function() { el.style.display = 'none'; }, 3000);
+    }
+  }
+</script>
+{% endblock %}

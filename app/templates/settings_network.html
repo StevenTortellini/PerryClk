@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Settings — Network{% endblock %}
+{% block content %}
+
+<div class="mobileBg">
+  <h5 class="mb-1"><span class="bgBottom"><i class="fas fa-network-wired me-1"></i> Network Configuration</span></h5>
+  <p class="text-muted small mt-2 mb-3">
+    Network changes are written to <code>/etc/dhcpcd.conf</code> and take effect after reboot.
+  </p>
+
+  <div class="alert py-2 small mb-4" style="background:#fff3cd; border-left:4px solid #c0392b; color:#555;">
+    <i class="fas fa-triangle-exclamation me-1" style="color:#c0392b;"></i>
+    <strong>Static IP is required for webhook use.</strong>
+    Perry Weather POSTs to a fixed URL — if the Pi's IP changes on DHCP renewal the webhook will break.
+    Use static IP here, or set a DHCP reservation on your router for the Pi's MAC address.
+  </div>
+
+  <form id="network-form" hx-post="/api/settings/network" hx-ext="json-enc" hx-swap="none"
+        hx-on::after-request="showSaved(event)">
+    <div class="row g-3">
+
+      <div class="col-12">
+        <h6 class="text-danger text-uppercase fw-bold border-bottom pb-1">
+          <i class="fas fa-sliders me-1"></i> Mode
+        </h6>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">Network mode</label>
+        <select class="form-select" name="network_mode" id="networkMode" onchange="toggleStaticFields()">
+          <option value="static" {% if settings.get('network_mode','static') == 'static' %}selected{% endif %}>Static IP (recommended)</option>
+          <option value="dhcp"   {% if settings.get('network_mode','static') == 'dhcp' %}selected{% endif %}>DHCP</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">Interface</label>
+        <input class="form-control" name="network_iface"
+               value="{{ settings.get('network_iface', 'eth0') }}">
+        <div class="form-text">eth0 = wired &nbsp;|&nbsp; wlan0 = Wi-Fi</div>
+      </div>
+
+      <!-- Static fields -->
+      <div id="staticFields" class="col-12">
+        <div class="row g-3">
+          <div class="col-12 mt-2">
+            <h6 class="text-danger text-uppercase fw-bold border-bottom pb-1">
+              <i class="fas fa-map-pin me-1"></i> Static IP Settings
+            </h6>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">IP address</label>
+            <input class="form-control" name="static_ip"
+                   value="{{ settings.get('static_ip', '') }}"
+                   placeholder="192.168.1.100">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Subnet mask</label>
+            <input class="form-control" name="static_netmask"
+                   value="{{ settings.get('static_netmask', '255.255.255.0') }}">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Gateway</label>
+            <input class="form-control" name="static_gateway"
+                   value="{{ settings.get('static_gateway', '') }}"
+                   placeholder="192.168.1.1">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">DNS server</label>
+            <input class="form-control" name="static_dns"
+                   value="{{ settings.get('static_dns', '8.8.8.8') }}">
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="mt-4 d-flex align-items-center gap-3">
+      <button class="btn btn-danger" type="submit">
+        <i class="fas fa-floppy-disk me-1"></i> Save
+      </button>
+      <span class="text-muted small">Changes take effect after reboot.</span>
+      <span id="savedMsg" class="text-success small" style="display:none;">
+        <i class="fas fa-check me-1"></i>Saved!
+      </span>
+    </div>
+  </form>
+</div>
+
+<script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+<script>
+  function toggleStaticFields() {
+    var mode = document.getElementById('networkMode').value;
+    document.getElementById('staticFields').style.display = mode === 'static' ? '' : 'none';
+  }
+  function showSaved(e) {
+    if (e.detail.successful) {
+      var el = document.getElementById('savedMsg');
+      el.style.display = 'inline';
+      setTimeout(function() { el.style.display = 'none'; }, 3000);
+    }
+  }
+  toggleStaticFields();
+</script>
+{% endblock %}

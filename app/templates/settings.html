@@ -2,25 +2,16 @@
 {% block title %}Settings{% endblock %}
 {% block content %}
 
-<div class="mobileBg">
-  <h5 class="mb-1"><span class="bgBottom"><i class="fas fa-gear me-1"></i> RS-485 &amp; Clock Configuration</span></h5>
-  <p class="text-muted small mt-2 mb-4">
-    Settings are stored in the database. RS-485 port changes take effect on the next service restart;
-    all other settings apply immediately.
-  </p>
+<p class="text-muted small mb-3">
+  Settings are stored in the database. RS-485 port changes take effect on the next service restart.
+  Time and network changes are applied to the Pi immediately.
+</p>
 
-  <form id="settings-form"
-        hx-post="/api/settings"
-        hx-ext="json-enc"
-        hx-swap="none">
-
+<!-- ── RS-485 & Clock ── -->
+<div class="mobileBg mb-3">
+  <h5 class="mb-3"><span class="bgBottom"><i class="fas fa-plug me-1"></i> RS-485 &amp; Clock</span></h5>
+  <form id="rs485-form" hx-post="/api/settings" hx-ext="json-enc" hx-swap="none">
     <div class="row g-3">
-      <!-- RS-485 section -->
-      <div class="col-12">
-        <h6 class="text-danger text-uppercase fw-bold border-bottom pb-1">
-          <i class="fas fa-plug me-1"></i> Serial / RS-485
-        </h6>
-      </div>
       <div class="col-md-6">
         <label class="form-label fw-semibold">Serial port</label>
         <input class="form-control" name="rs485_port" value="{{ settings.rs485_port }}">
@@ -33,30 +24,144 @@
       <div class="col-md-3">
         <label class="form-label fw-semibold">Clock address</label>
         <input class="form-control" name="clock_address" value="{{ settings.clock_address }}">
-        <div class="form-text">Decimal (e.g. 1 = 0x01)</div>
-      </div>
-
-      <!-- Behavior section -->
-      <div class="col-12 mt-2">
-        <h6 class="text-danger text-uppercase fw-bold border-bottom pb-1">
-          <i class="fas fa-stopwatch me-1"></i> Countdown Behavior
-        </h6>
+        <div class="form-text">Decimal (1 = 0x01)</div>
       </div>
       <div class="col-md-6">
         <label class="form-label fw-semibold">Default countdown (seconds)</label>
         <input type="number" class="form-control" name="default_countdown_seconds"
                value="{{ settings.default_countdown_seconds }}">
-        <div class="form-text">Used when Perry's payload doesn't include a duration (fallback).</div>
+        <div class="form-text">Fallback when Perry's payload doesn't include a duration.</div>
       </div>
     </div>
-
-    <div class="mt-4">
-      <button class="btn btn-danger" type="submit">
-        <i class="fas fa-floppy-disk me-1"></i> Save Settings
+    <div class="mt-3">
+      <button class="btn btn-danger btn-sm" type="submit">
+        <i class="fas fa-floppy-disk me-1"></i> Save RS-485 Settings
       </button>
     </div>
   </form>
 </div>
 
+<!-- ── Time / Date ── -->
+<div class="mobileBg mb-3">
+  <h5 class="mb-3"><span class="bgBottom"><i class="fas fa-clock me-1"></i> Time &amp; Date</span></h5>
+  <p class="text-muted small mb-3">
+    The Pi syncs time via NTP. Set the timezone so event log timestamps are correct for your location.
+    Manual time entry is only needed if NTP is unavailable.
+  </p>
+  <form id="time-form" hx-post="/api/settings/time" hx-ext="json-enc" hx-swap="none">
+    <div class="row g-3">
+      <div class="col-md-5">
+        <label class="form-label fw-semibold">Time zone</label>
+        <select class="form-select" name="timezone">
+          {% set tz = settings.get('timezone', 'America/Chicago') %}
+          <option value="America/New_York"      {% if tz == 'America/New_York' %}selected{% endif %}>Eastern (America/New_York)</option>
+          <option value="America/Chicago"       {% if tz == 'America/Chicago' %}selected{% endif %}>Central (America/Chicago)</option>
+          <option value="America/Denver"        {% if tz == 'America/Denver' %}selected{% endif %}>Mountain (America/Denver)</option>
+          <option value="America/Phoenix"       {% if tz == 'America/Phoenix' %}selected{% endif %}>Arizona (America/Phoenix)</option>
+          <option value="America/Los_Angeles"   {% if tz == 'America/Los_Angeles' %}selected{% endif %}>Pacific (America/Los_Angeles)</option>
+          <option value="America/Anchorage"     {% if tz == 'America/Anchorage' %}selected{% endif %}>Alaska (America/Anchorage)</option>
+          <option value="Pacific/Honolulu"      {% if tz == 'Pacific/Honolulu' %}selected{% endif %}>Hawaii (Pacific/Honolulu)</option>
+          <option value="UTC"                   {% if tz == 'UTC' %}selected{% endif %}>UTC</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">NTP server</label>
+        <input class="form-control" name="ntp_server" value="{{ settings.get('ntp_server', 'time.nist.gov') }}">
+      </div>
+      <div class="col-md-3 d-flex align-items-end">
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" name="ntp_enabled" id="ntpEnabled"
+                 {% if settings.get('ntp_enabled', '1') == '1' %}checked{% endif %}>
+          <label class="form-check-label fw-semibold" for="ntpEnabled">Use NTP sync</label>
+        </div>
+      </div>
+
+      <!-- Manual time entry — shown only when NTP is off -->
+      <div class="col-md-4" id="manualTimeBlock" style="display:none;">
+        <label class="form-label fw-semibold">Set time manually</label>
+        <input class="form-control" name="manual_time" placeholder="HH:MM:SS">
+        <div class="form-text">24-hour format, e.g. 14:30:00</div>
+      </div>
+      <div class="col-md-4" id="manualDateBlock" style="display:none;">
+        <label class="form-label fw-semibold">Set date manually</label>
+        <input class="form-control" name="manual_date" placeholder="YYYY-MM-DD">
+      </div>
+    </div>
+    <div class="mt-3">
+      <button class="btn btn-danger btn-sm" type="submit">
+        <i class="fas fa-floppy-disk me-1"></i> Save Time Settings
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- ── Network ── -->
+<div class="mobileBg mb-3">
+  <h5 class="mb-3"><span class="bgBottom"><i class="fas fa-network-wired me-1"></i> Network</span></h5>
+
+  <div class="alert alert-warning py-2 small mb-3">
+    <i class="fas fa-triangle-exclamation me-1"></i>
+    <strong>Static IP is required for webhook use.</strong>
+    Perry Weather POSTs to a fixed URL — if the Pi's IP changes on DHCP renewal the webhook breaks.
+    Use static IP here or set a DHCP reservation on your router.
+  </div>
+
+  <form id="network-form" hx-post="/api/settings/network" hx-ext="json-enc" hx-swap="none">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">Mode</label>
+        <select class="form-select" name="network_mode" id="networkMode" onchange="toggleStaticFields()">
+          <option value="static" {% if settings.get('network_mode','static') == 'static' %}selected{% endif %}>Static IP</option>
+          <option value="dhcp"   {% if settings.get('network_mode','static') == 'dhcp' %}selected{% endif %}>DHCP</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="staticFields" class="row g-3 mt-1">
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">IP address</label>
+        <input class="form-control" name="static_ip" value="{{ settings.get('static_ip', '') }}" placeholder="192.168.1.100">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">Subnet mask</label>
+        <input class="form-control" name="static_netmask" value="{{ settings.get('static_netmask', '255.255.255.0') }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">Gateway</label>
+        <input class="form-control" name="static_gateway" value="{{ settings.get('static_gateway', '') }}" placeholder="192.168.1.1">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">DNS server</label>
+        <input class="form-control" name="static_dns" value="{{ settings.get('static_dns', '8.8.8.8') }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">Interface</label>
+        <input class="form-control" name="network_iface" value="{{ settings.get('network_iface', 'eth0') }}">
+        <div class="form-text">eth0 for wired, wlan0 for Wi-Fi</div>
+      </div>
+    </div>
+
+    <div class="mt-3">
+      <button class="btn btn-danger btn-sm" type="submit">
+        <i class="fas fa-floppy-disk me-1"></i> Save Network Settings
+      </button>
+      <span class="text-muted small ms-2">Network changes take effect after reboot.</span>
+    </div>
+  </form>
+</div>
+
 <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+<script>
+  function toggleStaticFields() {
+    var mode = document.getElementById('networkMode').value;
+    document.getElementById('staticFields').style.display = mode === 'static' ? '' : 'none';
+  }
+  document.getElementById('ntpEnabled').addEventListener('change', function() {
+    var show = !this.checked;
+    document.getElementById('manualTimeBlock').style.display = show ? '' : 'none';
+    document.getElementById('manualDateBlock').style.display = show ? '' : 'none';
+  });
+  // Init on load
+  toggleStaticFields();
+</script>
 {% endblock %}

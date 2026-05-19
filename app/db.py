@@ -43,12 +43,24 @@ CREATE INDEX IF NOT EXISTS idx_event_log_created_at
 
 # Default values for the settings table; written once at init_db time.
 DEFAULT_SETTINGS = {
+    # RS-485 / clock
     "rs485_port": "/dev/ttyUSB0",
     "rs485_baud": "9600",
     "clock_address": "1",
     "default_countdown_seconds": "1800",
-    "delay_action": "start_countdown",  # or 'custom_message'
+    "delay_action": "start_countdown",
     "all_clear_action": "clear_to_time",
+    # Time
+    "timezone": "America/Chicago",
+    "ntp_enabled": "1",
+    "ntp_server": "time.nist.gov",
+    # Network
+    "network_mode": "static",
+    "network_iface": "eth0",
+    "static_ip": "",
+    "static_netmask": "255.255.255.0",
+    "static_gateway": "",
+    "static_dns": "8.8.8.8",
 }
 
 
