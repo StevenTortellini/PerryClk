@@ -108,16 +108,23 @@
 
 <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
 <script>
-  // Seed from Pi server time so timezone is correct, then tick client-side
-  var piTime = new Date("{{ now_iso }}");
-  var offset = piTime - Date.now();  // ms difference between Pi and browser
+  // Use Pi's UTC epoch + IANA timezone name so the clock always shows
+  // the correct local time for the configured timezone regardless of
+  // where the browser is located.
+  var piUTC  = {{ now_utc_ms }};          // Pi's UTC time in ms at page render
+  var drift  = piUTC - Date.now();        // compensate for Pi/browser clock difference
+  var piTZ   = "{{ settings.get('timezone', 'UTC') }}";
+
+  var fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone:  piTZ,
+    hour:      '2-digit',
+    minute:    '2-digit',
+    second:    '2-digit',
+    hour12:    false
+  });
 
   function tickClock() {
-    var t = new Date(Date.now() + offset);
-    var h = String(t.getHours()).padStart(2, '0');
-    var m = String(t.getMinutes()).padStart(2, '0');
-    var s = String(t.getSeconds()).padStart(2, '0');
-    document.getElementById('pi-clock').textContent = h + ':' + m + ':' + s;
+    document.getElementById('pi-clock').textContent = fmt.format(new Date(Date.now() + drift));
   }
   tickClock();
   setInterval(tickClock, 1000);
