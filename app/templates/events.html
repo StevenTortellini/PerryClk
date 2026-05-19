@@ -1,29 +1,39 @@
 {% extends "base.html" %}
-{% block title %}Event log{% endblock %}
+{% block title %}Event Log{% endblock %}
 {% block content %}
-<h3>Event log</h3>
-<table class="table table-sm table-striped">
-  <thead>
-    <tr>
-      <th>Time</th>
-      <th>Type</th>
-      <th>Source</th>
-      <th>Status</th>
-      <th>Frame</th>
-      <th>Error</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for e in events %}
-    <tr>
-      <td>{{ e.created_at }}</td>
-      <td>{{ e.event_type }}</td>
-      <td>{{ e.source }}</td>
-      <td class="status-{{ e.rs485_status }}">{{ e.rs485_status }}</td>
-      <td><code class="frame">{{ e.rs485_frame_hex or "" }}</code></td>
-      <td>{{ e.error_message or "" }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+
+<div class="mobileBg">
+  <h5 class="mb-3"><span class="bgBottom"><i class="fas fa-list me-1"></i> Event Log</span></h5>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Type</th>
+          <th>Source</th>
+          <th>Status</th>
+          <th>RS-485 Frame</th>
+          <th>Error</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in events %}
+        <tr>
+          <td class="text-nowrap">{{ e.created_at }}</td>
+          <td><span class="badge {% if e.event_type == 'DELAY' %}bg-warning text-dark{% elif e.event_type == 'ALL_CLEAR' %}bg-success{% else %}bg-secondary{% endif %}">
+            {{ e.event_type }}
+          </span></td>
+          <td>{{ e.source }}</td>
+          <td class="status-{{ e.rs485_status }}">{{ e.rs485_status }}</td>
+          <td><code class="frame">{{ e.rs485_frame_hex or "" }}</code></td>
+          <td class="small text-muted">{{ e.error_message or "" }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-muted text-center">No events yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
 {% endblock %}

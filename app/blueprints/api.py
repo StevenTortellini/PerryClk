@@ -52,7 +52,7 @@ def update_settings():
         "rs485_baud",
         "clock_address",
         "default_countdown_seconds",
-        "lightning_alert_action",
+        "delay_action",
         "all_clear_action",
     }
     updated = {}
@@ -73,7 +73,7 @@ def test_countdown():
 
     event_id = log_event(
         db,
-        event_type="lightning_alert",
+        event_type="DELAY",
         source="manual",
         payload={"seconds": seconds},
     )
@@ -92,7 +92,7 @@ def test_clear():
     db = get_db()
     event_id = log_event(
         db,
-        event_type="all_clear",
+        event_type="ALL_CLEAR",
         source="manual",
         payload={},
     )

@@ -2,41 +2,162 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CLK — {% block title %}{% endblock %}</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}CLK{% endblock %} — Perry Weather Clock</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   <style>
-    body { padding-top: 1rem; padding-bottom: 3rem; }
-    .status-success { color: #198754; }
-    .status-failed  { color: #dc3545; }
+    /* ── Theme ── */
+    :root { --danger: #dc3545; }
+
+    body { padding-bottom: 4rem; background-color: #f8f9fa; }
+
+    /* ── Header ── */
+    .header-alignment { padding: .75rem 0; }
+    .logo-container img { height: 48px; }
+    .top-content { font-size: .9rem; }
+
+    /* ── Navbar ── */
+    .navbar { background-color: #343a40 !important; }
+    .navbar .nav-link { color: #fff !important; padding: .5rem 1rem; }
+    .navbar .nav-link:hover { color: #dc3545 !important; }
+    .navbar .nav-item { position: relative; }
+
+    /* dropdown sub-menus */
+    .navbar .nav-item ul.sub {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: #343a40;
+      list-style: none;
+      padding: .25rem 0;
+      margin: 0;
+      min-width: 200px;
+      z-index: 999;
+      border-top: 2px solid #dc3545;
+    }
+    .navbar .nav-item:hover ul.sub { display: block; }
+    .navbar .nav-item ul.sub li a {
+      display: block;
+      padding: .4rem 1rem;
+      color: #ccc;
+      text-decoration: none;
+      font-size: .875rem;
+    }
+    .navbar .nav-item ul.sub li a:hover { background: #495057; color: #fff; }
+    .menuactive { color: #dc3545 !important; font-weight: 600; }
+
+    /* ── Status cards ── */
+    .cardBg { background: #fff; border-radius: .5rem; box-shadow: 0 1px 4px rgba(0,0,0,.1); padding: 1rem .5rem; }
+    .card-costum { padding: .5rem; }
+    .labeltext { font-size: .78rem; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    .labelvalue { font-size: 1rem; font-weight: 600; color: #dc3545; margin-top: .2rem; word-break: break-all; }
+
+    /* ── Content sections ── */
+    .para { color: #333; }
+    .bgBottom {
+      border-bottom: 2px solid #dc3545;
+      padding-bottom: .2rem;
+    }
+    .mobileBg { background: #fff; border-radius: .5rem; padding: 1rem; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+
+    /* ── Status colours ── */
+    .status-success { color: #198754; font-weight: 600; }
+    .status-failed  { color: #dc3545; font-weight: 600; }
     .status-pending { color: #6c757d; }
-    code.frame { font-size: 0.85em; }
+
+    /* ── Table ── */
+    .table thead th { background: #343a40; color: #fff; font-size: .8rem; text-transform: uppercase; }
+    code.frame { font-size: .78em; }
+
+    /* ── Footer ── */
+    .footer-bg { background: #343a40; color: #adb5bd; font-size: .8rem; margin-top: 3rem; }
   </style>
 </head>
-<body class="container">
-  <nav class="navbar navbar-expand-md navbar-light bg-light rounded mb-4 px-3">
-    <a class="navbar-brand" href="{{ url_for('ui.dashboard') }}">CLK</a>
-    {% if current_user.is_authenticated %}
-    <ul class="navbar-nav me-auto">
-      <li class="nav-item"><a class="nav-link" href="{{ url_for('ui.dashboard') }}">Dashboard</a></li>
-      <li class="nav-item"><a class="nav-link" href="{{ url_for('ui.events') }}">Event log</a></li>
-      <li class="nav-item"><a class="nav-link" href="{{ url_for('ui.settings') }}">Settings</a></li>
-    </ul>
-    <form method="post" action="{{ url_for('auth.logout') }}" class="d-flex">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <span class="navbar-text me-3">{{ current_user.username }}</span>
-      <button class="btn btn-outline-secondary btn-sm" type="submit">Log out</button>
-    </form>
-    {% endif %}
-  </nav>
+<body>
 
+<!-- ── Header ── -->
+<div class="container">
+  <div class="d-flex flex-column flex-sm-row align-items-center justify-content-between header-alignment">
+    <div class="logo-container">
+      <a href="{{ url_for('ui.dashboard') }}" class="text-decoration-none">
+        <span style="font-size:1.8rem; font-weight:700; color:#dc3545;"><i class="fas fa-clock me-1"></i>CLK</span>
+      </a>
+    </div>
+    {% if current_user.is_authenticated %}
+    <div class="top-content text-end">
+      <span class="text-danger">Welcome: </span><span>{{ current_user.username }}</span> |
+      <span class="text-danger">Product: </span><span>Perry Weather Clock</span>
+      <div class="mt-2">
+        <form method="post" action="{{ url_for('auth.logout') }}" class="d-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-danger btn-sm" type="submit">Logout</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── Navigation ── -->
+{% if current_user.is_authenticated %}
+<nav class="navbar navbar-expand-lg sticky-top mb-4">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="mainNav">
+      <ul class="navbar-nav m-auto">
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint == 'ui.dashboard' %}menuactive{% endif %}"
+             href="{{ url_for('ui.dashboard') }}">
+            <i class="fas fa-gauge-high me-1"></i>Dashboard
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint == 'ui.events' %}menuactive{% endif %}"
+             href="{{ url_for('ui.events') }}">
+            <i class="fas fa-list me-1"></i>Event Log
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint == 'ui.settings' %}menuactive{% endif %}"
+             href="#">
+            <i class="fas fa-gear me-1"></i>Settings
+          </a>
+          <ul class="sub">
+            <li><a href="{{ url_for('ui.settings') }}">RS-485 &amp; Clock Config</a></li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+{% endif %}
+
+<!-- ── Flash messages ── -->
+<div class="container">
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% for category, message in messages %}
-      <div class="alert alert-{{ category }}">{{ message }}</div>
+      <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
     {% endfor %}
   {% endwith %}
 
   {% block content %}{% endblock %}
+</div>
+
+<!-- ── Footer ── -->
+<footer class="footer-bg text-lg-start mt-5">
+  <div class="text-center p-2">
+    CLK — Perry Weather Clock &nbsp;|&nbsp; Perry Weather RS-485 Bridge
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

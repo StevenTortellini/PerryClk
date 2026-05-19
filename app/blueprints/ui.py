@@ -22,7 +22,9 @@ def dashboard():
         LIMIT 25
         """
     ).fetchall()
-    return render_template("dashboard.html", events=rows)
+    setting_rows = db.execute("SELECT key, value FROM settings").fetchall()
+    settings = {r["key"]: r["value"] for r in setting_rows}
+    return render_template("dashboard.html", events=rows, settings=settings)
 
 
 @bp.get("/settings")

@@ -1,37 +1,62 @@
 {% extends "base.html" %}
 {% block title %}Settings{% endblock %}
 {% block content %}
-<h3>Settings</h3>
-<p class="text-muted">Configuration is stored in the SQLite database and applied
-on the next service restart (for RS-485 port changes) or immediately (for
-behavior settings).</p>
 
-<form id="settings-form"
-      hx-post="/api/settings"
-      hx-ext="json-enc"
-      hx-swap="none">
-  <div class="row g-3">
-    <div class="col-md-6">
-      <label class="form-label">Serial port</label>
-      <input class="form-control" name="rs485_port" value="{{ settings.rs485_port }}">
+<div class="mobileBg">
+  <h5 class="mb-1"><span class="bgBottom"><i class="fas fa-gear me-1"></i> RS-485 &amp; Clock Configuration</span></h5>
+  <p class="text-muted small mt-2 mb-4">
+    Settings are stored in the database. RS-485 port changes take effect on the next service restart;
+    all other settings apply immediately.
+  </p>
+
+  <form id="settings-form"
+        hx-post="/api/settings"
+        hx-ext="json-enc"
+        hx-swap="none">
+
+    <div class="row g-3">
+      <!-- RS-485 section -->
+      <div class="col-12">
+        <h6 class="text-danger text-uppercase fw-bold border-bottom pb-1">
+          <i class="fas fa-plug me-1"></i> Serial / RS-485
+        </h6>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-semibold">Serial port</label>
+        <input class="form-control" name="rs485_port" value="{{ settings.rs485_port }}">
+        <div class="form-text">e.g. /dev/ttyUSB0 on Pi, COM3 on Windows</div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">Baud rate</label>
+        <input class="form-control" name="rs485_baud" value="{{ settings.rs485_baud }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">Clock address</label>
+        <input class="form-control" name="clock_address" value="{{ settings.clock_address }}">
+        <div class="form-text">Decimal (e.g. 1 = 0x01)</div>
+      </div>
+
+      <!-- Behavior section -->
+      <div class="col-12 mt-2">
+        <h6 class="text-danger text-uppercase fw-bold border-bottom pb-1">
+          <i class="fas fa-stopwatch me-1"></i> Countdown Behavior
+        </h6>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-semibold">Default countdown (seconds)</label>
+        <input type="number" class="form-control" name="default_countdown_seconds"
+               value="{{ settings.default_countdown_seconds }}">
+        <div class="form-text">Used when Perry's payload doesn't include a duration (fallback).</div>
+      </div>
     </div>
-    <div class="col-md-3">
-      <label class="form-label">Baud rate</label>
-      <input class="form-control" name="rs485_baud" value="{{ settings.rs485_baud }}">
+
+    <div class="mt-4">
+      <button class="btn btn-danger" type="submit">
+        <i class="fas fa-floppy-disk me-1"></i> Save Settings
+      </button>
     </div>
-    <div class="col-md-3">
-      <label class="form-label">Clock address</label>
-      <input class="form-control" name="clock_address" value="{{ settings.clock_address }}">
-    </div>
-    <div class="col-md-6">
-      <label class="form-label">Default countdown (seconds)</label>
-      <input type="number" class="form-control" name="default_countdown_seconds"
-             value="{{ settings.default_countdown_seconds }}">
-      <div class="form-text">Used when Perry's payload doesn't include a duration.</div>
-    </div>
-  </div>
-  <button class="btn btn-primary mt-3" type="submit">Save</button>
-</form>
+  </form>
+</div>
 
 <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
 {% endblock %}

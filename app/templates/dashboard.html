@@ -2,62 +2,109 @@
 {% block title %}Dashboard{% endblock %}
 {% block content %}
 
-<div class="row g-3">
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-header">Manual controls</div>
-      <div class="card-body">
-        <div class="mb-3">
-          <label class="form-label">Test countdown duration (seconds)</label>
-          <input id="test-seconds" type="number" class="form-control" value="60" min="1" max="65535">
-        </div>
-        <button class="btn btn-warning"
-                hx-post="/api/test/countdown"
-                hx-ext="json-enc"
-                hx-vals='js:{seconds: parseInt(document.getElementById("test-seconds").value)}'
-                hx-swap="none">
-          Send test countdown
-        </button>
-        <button class="btn btn-success ms-2"
-                hx-post="/api/test/clear"
-                hx-swap="none">
-          Send all-clear
-        </button>
-      </div>
+<!-- Status cards row -->
+<div class="row row-cols-2 row-cols-md-4 cardBg my-4 g-2">
+  <div class="col">
+    <div class="card-costum text-center">
+      <div class="labeltext"><i class="fas fa-tower-broadcast me-1"></i>RS-485 Port</div>
+      <div class="labelvalue">{{ settings.rs485_port }}</div>
     </div>
   </div>
-
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-header">System</div>
-      <div class="card-body">
-        <p class="mb-1"><strong>Pi:</strong> {{ request.host }}</p>
-        <p class="mb-1"><strong>User:</strong> {{ current_user.username }}</p>
-        <p class="mb-0"><a href="{{ url_for('ui.settings') }}">Open settings →</a></p>
-      </div>
+  <div class="col">
+    <div class="card-costum text-center">
+      <div class="labeltext"><i class="fas fa-microchip me-1"></i>Clock Address</div>
+      <div class="labelvalue">0x{{ '%02X' % settings.clock_address|int }}</div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card-costum text-center">
+      <div class="labeltext"><i class="fas fa-stopwatch me-1"></i>Default Countdown</div>
+      <div class="labelvalue">{{ (settings.default_countdown_seconds|int // 60) }} min</div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card-costum text-center">
+      <div class="labeltext"><i class="fas fa-server me-1"></i>Host</div>
+      <div class="labelvalue">{{ request.host }}</div>
     </div>
   </div>
 </div>
 
-<h4 class="mt-4">Recent events</h4>
-<table class="table table-sm table-striped">
-  <thead>
-    <tr><th>Time</th><th>Type</th><th>Source</th><th>Status</th><th>Error</th></tr>
-  </thead>
-  <tbody>
-    {% for e in events %}
-    <tr>
-      <td>{{ e.created_at }}</td>
-      <td>{{ e.event_type }}</td>
-      <td>{{ e.source }}</td>
-      <td class="status-{{ e.rs485_status }}">{{ e.rs485_status }}</td>
-      <td>{{ e.error_message or "" }}</td>
-    </tr>
-    {% else %}
-    <tr><td colspan="5" class="text-muted">No events yet.</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
+<!-- Manual controls + last event -->
+<div class="row g-3 mt-2">
+  <div class="col-md-6">
+    <div class="mobileBg">
+      <h5 class="mb-3"><span class="bgBottom"><i class="fas fa-sliders me-1"></i> Manual Controls</span></h5>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Test countdown duration (seconds)</label>
+        <input id="test-seconds" type="number" class="form-control" value="60" min="1" max="65535">
+      </div>
+      <button class="btn btn-warning"
+              hx-post="/api/test/countdown"
+              hx-ext="json-enc"
+              hx-vals='js:{seconds: parseInt(document.getElementById("test-seconds").value)}'
+              hx-swap="none">
+        <i class="fas fa-bolt me-1"></i> Send test countdown
+      </button>
+      <button class="btn btn-success ms-2"
+              hx-post="/api/test/clear"
+              hx-swap="none">
+        <i class="fas fa-circle-check me-1"></i> Send all-clear
+      </button>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="mobileBg">
+      <h5 class="mb-3"><span class="bgBottom"><i class="fas fa-circle-info me-1"></i> System Info</span></h5>
+      <p class="mb-1"><span class="text-danger fw-semibold">Host:</span> {{ request.host }}</p>
+      <p class="mb-1"><span class="text-danger fw-semibold">User:</span> {{ current_user.username }}</p>
+      <p class="mb-0"><a href="{{ url_for('ui.settings') }}" class="text-danger">
+        <i class="fas fa-gear me-1"></i>Open settings →
+      </a></p>
+    </div>
+  </div>
+</div>
+
+<!-- Recent events -->
+<div class="row mt-4">
+  <div class="col-md-12">
+    <div class="mobileBg">
+      <h5 class="mb-3"><span class="bgBottom"><i class="fas fa-list me-1"></i> Recent Events</span></h5>
+      <div class="table-responsive">
+        <table class="table table-sm table-striped table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Type</th>
+              <th>Source</th>
+              <th>Status</th>
+              <th>Error</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in events %}
+            <tr>
+              <td class="text-nowrap">{{ e.created_at }}</td>
+              <td><span class="badge {% if e.event_type == 'DELAY' %}bg-warning text-dark{% elif e.event_type == 'ALL_CLEAR' %}bg-success{% else %}bg-secondary{% endif %}">
+                {{ e.event_type }}
+              </span></td>
+              <td>{{ e.source }}</td>
+              <td class="status-{{ e.rs485_status }}">{{ e.rs485_status }}</td>
+              <td class="small text-muted">{{ e.error_message or "" }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="text-muted text-center">No events yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="mt-2 text-end">
+        <a href="{{ url_for('ui.events') }}" class="text-danger small">View full log →</a>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
 {% endblock %}

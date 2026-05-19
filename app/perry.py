@@ -41,8 +41,8 @@ from pydantic import BaseModel, Field, ValidationError
 
 
 class AlertKind(str, Enum):
-    LIGHTNING_ALERT = "lightning_alert"
-    ALL_CLEAR = "all_clear"
+    DELAY = "DELAY"
+    ALL_CLEAR = "ALL_CLEAR"
     UNKNOWN = "unknown"
 
 
@@ -84,7 +84,7 @@ class PerryEvent(BaseModel):
     def kind(self) -> AlertKind:
         et = (self.event_type or "").upper()
         if et == "DELAY":
-            return AlertKind.LIGHTNING_ALERT
+            return AlertKind.DELAY
         if et == "ALL_CLEAR":
             return AlertKind.ALL_CLEAR
         return AlertKind.UNKNOWN
