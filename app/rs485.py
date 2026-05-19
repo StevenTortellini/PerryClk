@@ -17,6 +17,7 @@ from __future__ import annotations
 import threading
 import time
 from dataclasses import dataclass
+from datetime import datetime
 from enum import IntEnum
 from typing import Optional
 
@@ -114,6 +115,39 @@ def build_write_clear(address: int) -> bytes:
         0x03,                  # Data length: serial(1) + mode(2)
         SN_MODE,
         0x00, Mode.TIME,
+    ])
+    return build_frame(body)
+
+
+def build_write_time(address: int, dt: datetime) -> bytes:
+    """
+    Sync the clock's internal RTC to *dt*.
+
+    Frame layout:
+        3A <addr> 74 08 <yr_hi> <yr_lo> <mo> <day> <hr> <min> <sec> <wday> <cksum> 0A
+
+    yr_hi / yr_lo  : century and 2-digit year  (2025 → 20, 25)
+    mo             : 1–12
+    day            : 1–31
+    hr             : 0–23
+    min            : 0–59
+    sec            : 0–59
+    wday           : 0=Sunday, 1=Monday … 6=Saturday
+                     (Python weekday() is 0=Monday, so we rotate by 1)
+    """
+    wday = (dt.weekday() + 1) % 7   # Mon=0 in Python → Sun=0, Mon=1, …, Sat=6
+    body = bytes([
+        address,
+        FN_WRITE_TIME,
+        0x08,               # 8 data bytes
+        dt.year // 100,     # e.g. 20
+        dt.year % 100,      # e.g. 25
+        dt.month,
+        dt.day,
+        dt.hour,
+        dt.minute,
+        dt.second,
+        wday,
     ])
     return build_frame(body)
 

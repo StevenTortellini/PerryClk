@@ -14,7 +14,13 @@ import queue
 import threading
 import time
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo  # type: ignore[no-redef]
 
 import structlog
 
@@ -24,6 +30,7 @@ from .rs485 import (
     RS485Driver,
     build_write_countdown,
     build_write_clear,
+    build_write_time,
     hexdump,
 )
 
@@ -113,6 +120,15 @@ class Worker:
                 self.driver.send(frame)
 
             elif job.action == "clear_to_time":
+                # 1. Sync the clock's RTC to the Pi's current local time
+                with standalone_connection(self.db_path) as _conn:
+                    tz_name = get_setting(_conn, "timezone", "UTC")
+                now = datetime.now(ZoneInfo(tz_name))
+                time_frame = build_write_time(self.clock_address, now)
+                self.driver.send(time_frame)
+                log.info("worker.time_sync", ts=now.isoformat(), tz=tz_name)
+
+                # 2. Switch the clock back to time-of-day display mode
                 frame = build_write_clear(self.clock_address)
                 frame_hex = hexdump(frame)
                 self.driver.send(frame)
