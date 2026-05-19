@@ -42,6 +42,7 @@ def dashboard():
         settings=settings,
         now=now.strftime("%H:%M:%S"),
         now_iso=now.isoformat(),
+        now_utc_ms=int(now.timestamp() * 1000),
     )
 
 
