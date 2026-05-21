@@ -30,6 +30,21 @@
   </div>
 </div>
 
+<!-- Clock status -->
+<div class="row mt-3">
+  <div class="col-12">
+    <div class="mobileBg d-flex align-items-center gap-3 flex-wrap py-2">
+      <span class="fw-semibold text-muted" style="font-size:.82rem;text-transform:uppercase;letter-spacing:.05em;">
+        <i class="fas fa-display me-1"></i> Clock Status
+      </span>
+      <span id="clock-status-badge"><span class="badge bg-secondary">Polling…</span></span>
+      <span id="clock-status-detail" class="text-muted small"></span>
+      <span id="clock-countdown-timer" class="fw-semibold text-danger ms-auto"
+            style="font-size:1.4rem;letter-spacing:.08em;display:none;font-variant-numeric:tabular-nums;"></span>
+    </div>
+  </div>
+</div>
+
 <!-- Manual controls + last event -->
 <div class="row g-3 mt-2">
   <div class="col-md-6">
@@ -128,5 +143,63 @@
   }
   tickClock();
   setInterval(tickClock, 1000);
+
+  // ── RS-485 clock status polling ──
+  var _countdownRemaining = 0;
+
+  function fmtSeconds(s) {
+    var h = Math.floor(s / 3600);
+    var m = Math.floor((s % 3600) / 60);
+    var sec = s % 60;
+    if (h > 0)
+      return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+    return String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+  }
+
+  function pollClockStatus() {
+    fetch('/api/clock/status')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!d) return;
+        var badge  = document.getElementById('clock-status-badge');
+        var detail = document.getElementById('clock-status-detail');
+        var timer  = document.getElementById('clock-countdown-timer');
+
+        if (!d.online) {
+          badge.innerHTML  = '<span class="badge bg-danger">Offline</span>';
+          detail.textContent = d.error || '';
+          timer.style.display = 'none';
+          return;
+        }
+
+        if (d.mode === 'COUNTDOWN') {
+          var paused = d.flag === 'PAUSE';
+          badge.innerHTML = paused
+            ? '<span class="badge bg-warning text-dark">Paused</span>'
+            : '<span class="badge bg-warning text-dark">Counting down</span>';
+          detail.textContent = '';
+          _countdownRemaining = d.countdown_seconds;
+          timer.textContent   = fmtSeconds(_countdownRemaining);
+          timer.style.display = '';
+        } else {
+          badge.innerHTML     = '<span class="badge bg-success">Displaying time</span>';
+          detail.textContent  = '';
+          timer.style.display = 'none';
+          _countdownRemaining = 0;
+        }
+      })
+      .catch(() => {});
+  }
+
+  // Tick the local countdown display every second; re-sync from Pi every 5 s
+  setInterval(function() {
+    if (_countdownRemaining > 0) {
+      _countdownRemaining--;
+      document.getElementById('clock-countdown-timer').textContent = fmtSeconds(_countdownRemaining);
+    }
+  }, 1000);
+
+  pollClockStatus();
+  setInterval(pollClockStatus, 5000);
 </script>
 {% endblock %}

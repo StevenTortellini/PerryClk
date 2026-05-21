@@ -19,7 +19,9 @@ bp = Blueprint("webhook", __name__, url_prefix="/webhook")
 def perry_webhook():
     raw_body = request.get_data()
     signature = request.headers.get("X-Perry-Signature", "")
-    secret = current_app.config["PERRY_WEBHOOK_SECRET"]
+    # DB setting takes precedence; fall back to env/config for backwards compat
+    db = get_db()
+    secret = get_setting(db, "webhook_secret") or current_app.config.get("PERRY_WEBHOOK_SECRET", "")
 
     if not verify_signature(secret, raw_body, signature):
         log.warning("webhook.bad_signature", ip=request.remote_addr)

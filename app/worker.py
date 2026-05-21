@@ -78,6 +78,29 @@ class Worker:
     def enqueue(self, job: Job) -> None:
         self.q.put(job)
 
+    def read_clock_state(self) -> dict:
+        """
+        Poll the clock for its current mode, countdown value, and flag.
+        Returns a dict safe for JSON serialisation.
+        Safe to call from any thread — RS485Driver.send() is already locked.
+        """
+        from .rs485 import build_read_general, parse_general_response
+        try:
+            if not self.driver._ser or not self.driver._ser.is_open:
+                self.driver.open()
+            frame = build_read_general(self.clock_address)
+            response = self.driver.send(frame)
+            state = parse_general_response(response)
+            return {
+                "online": True,
+                "mode": state.mode.name,           # "TIME" or "COUNTDOWN"
+                "countdown_seconds": state.countdown_seconds,
+                "flag": state.flag.name,            # "START" or "PAUSE"
+            }
+        except Exception as e:
+            log.warning("worker.read_state_failed", error=str(e))
+            return {"online": False, "error": str(e)}
+
     def reconfigure(self, port: str, baud: int, clock_address: int) -> None:
         """
         Hot-swap the serial port and clock address without restarting the thread.

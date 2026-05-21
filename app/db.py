@@ -38,6 +38,15 @@ CREATE TABLE IF NOT EXISTS event_log (
 
 CREATE INDEX IF NOT EXISTS idx_event_log_created_at
     ON event_log (created_at DESC);
+
+CREATE TABLE IF NOT EXISTS schedules (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    name            TEXT NOT NULL,
+    enabled         INTEGER NOT NULL DEFAULT 1,
+    cron_expr       TEXT NOT NULL,              -- standard 5-field cron (UTC)
+    countdown_seconds INTEGER NOT NULL DEFAULT 1800,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 
@@ -54,6 +63,10 @@ DEFAULT_SETTINGS = {
     "timezone": "America/Chicago",
     "ntp_enabled": "1",
     "ntp_server": "time.nist.gov",
+    # Webhook
+    "webhook_secret": "",
+    # Discovery
+    "product_name": "CLK-Perry",
     # Network
     "network_mode": "static",
     "network_iface": "eth0",

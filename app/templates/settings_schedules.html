@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}Schedules{% endblock %}
+{% block content %}
+
+<!-- ── Schedule list ── -->
+<div class="mobileBg mb-3">
+  <h5 class="mb-3"><span class="bgBottom"><i class="fas fa-calendar-check me-1"></i> Scheduled Countdowns</span></h5>
+  <p class="text-muted small mb-3">
+    Schedules fire in <strong>UTC</strong>. Use a cron expression (5 fields: min hour day month weekday).
+    Example: <code>0 14 * * 1-5</code> fires at 14:00 UTC every weekday.
+  </p>
+
+  <div class="table-responsive">
+    <table class="table table-sm table-striped table-hover mb-0" id="schedule-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Cron (UTC)</th>
+          <th>Duration</th>
+          <th>Enabled</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="schedule-tbody">
+        {% for s in schedules %}
+        <tr id="sched-row-{{ s.id }}">
+          <td class="fw-semibold">{{ s.name }}</td>
+          <td><code>{{ s.cron_expr }}</code></td>
+          <td>{{ s.countdown_seconds }}s</td>
+          <td>
+            <span class="badge {% if s.enabled %}bg-success{% else %}bg-secondary{% endif %}">
+              {{ 'on' if s.enabled else 'off' }}
+            </span>
+          </td>
+          <td class="text-end">
+            <button class="btn btn-outline-secondary btn-sm me-1"
+                    onclick="editSchedule({{ s.id }}, '{{ s.name }}', '{{ s.cron_expr }}', {{ s.countdown_seconds }}, {{ s.enabled }})">
+              <i class="fas fa-pen"></i>
+            </button>
+            <button class="btn btn-outline-danger btn-sm"
+                    onclick="deleteSchedule({{ s.id }}, '{{ s.name }}')">
+              <i class="fas fa-trash-can"></i>
+            </button>
+          </td>
+        </tr>
+        {% else %}
+        <tr id="no-schedules-row">
+          <td colspan="5" class="text-muted text-center">No schedules yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Add / Edit form ── -->
+<div class="mobileBg">
+  <h5 class="mb-3" id="form-title"><span class="bgBottom"><i class="fas fa-plus me-1"></i> Add Schedule</span></h5>
+  <input type="hidden" id="edit-id" value="">
+
+  <div class="row g-3">
+    <div class="col-md-4">
+      <label class="form-label fw-semibold">Name</label>
+      <input type="text" id="s-name" class="form-control" placeholder="e.g. Daily Drill">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label fw-semibold">Cron expression <span class="text-muted">(UTC)</span></label>
+      <input type="text" id="s-cron" class="form-control" placeholder="0 14 * * 1-5">
+      <div class="form-text">
+        <a href="https://crontab.guru" target="_blank" class="text-danger">crontab.guru</a> — 5-field, UTC
+      </div>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label fw-semibold">Countdown duration (seconds)</label>
+      <input type="number" id="s-seconds" class="form-control" value="1800" min="1" max="65535">
+    </div>
+    <div class="col-md-3 d-flex align-items-end">
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" id="s-enabled" checked>
+        <label class="form-check-label fw-semibold" for="s-enabled">Enabled</label>
+      </div>
+    </div>
+  </div>
+
+  <div id="sched-msg" class="small mt-2"></div>
+
+  <div class="mt-3 d-flex gap-2">
+    <button class="btn btn-danger btn-sm" id="save-btn" onclick="saveSchedule()">
+      <i class="fas fa-floppy-disk me-1"></i> Save Schedule
+    </button>
+    <button class="btn btn-outline-secondary btn-sm" id="cancel-btn" onclick="cancelEdit()" style="display:none;">
+      Cancel
+    </button>
+  </div>
+</div>
+
+<script>
+  function schedMsg(text, ok) {
+    var el = document.getElementById('sched-msg');
+    el.textContent = text;
+    el.className = 'small mt-2 ' + (ok ? 'text-success' : 'text-danger');
+  }
+
+  function saveSchedule() {
+    var id      = document.getElementById('edit-id').value;
+    var name    = document.getElementById('s-name').value.trim();
+    var cron    = document.getElementById('s-cron').value.trim();
+    var seconds = parseInt(document.getElementById('s-seconds').value);
+    var enabled = document.getElementById('s-enabled').checked;
+
+    var method = id ? 'PUT' : 'POST';
+    var url    = id ? '/api/schedules/' + id : '/api/schedules';
+
+    fetch(url, {
+      method,
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, cron_expr: cron, countdown_seconds: seconds, enabled})
+    })
+    .then(r => r.json().then(d => ({ok: r.ok, d})))
+    .then(({ok, d}) => {
+      if (ok) {
+        schedMsg(id ? 'Schedule updated!' : 'Schedule added!', true);
+        upsertRow(d.schedule);
+        cancelEdit();
+      } else {
+        schedMsg(d.error || 'Error', false);
+      }
+    })
+    .catch(() => schedMsg('Request failed', false));
+  }
+
+  function upsertRow(s) {
+    var noRow = document.getElementById('no-schedules-row');
+    if (noRow) noRow.remove();
+
+    var existing = document.getElementById('sched-row-' + s.id);
+    var html = `
+      <td class="fw-semibold">${s.name}</td>
+      <td><code>${s.cron_expr}</code></td>
+      <td>${s.countdown_seconds}s</td>
+      <td><span class="badge ${s.enabled ? 'bg-success' : 'bg-secondary'}">${s.enabled ? 'on' : 'off'}</span></td>
+      <td class="text-end">
+        <button class="btn btn-outline-secondary btn-sm me-1"
+                onclick="editSchedule(${s.id},'${s.name}','${s.cron_expr}',${s.countdown_seconds},${s.enabled})">
+          <i class="fas fa-pen"></i>
+        </button>
+        <button class="btn btn-outline-danger btn-sm" onclick="deleteSchedule(${s.id},'${s.name}')">
+          <i class="fas fa-trash-can"></i>
+        </button>
+      </td>`;
+
+    if (existing) {
+      existing.innerHTML = html;
+    } else {
+      var tr = document.createElement('tr');
+      tr.id = 'sched-row-' + s.id;
+      tr.innerHTML = html;
+      document.getElementById('schedule-tbody').appendChild(tr);
+    }
+  }
+
+  function editSchedule(id, name, cron, seconds, enabled) {
+    document.getElementById('edit-id').value   = id;
+    document.getElementById('s-name').value    = name;
+    document.getElementById('s-cron').value    = cron;
+    document.getElementById('s-seconds').value = seconds;
+    document.getElementById('s-enabled').checked = !!enabled;
+    document.getElementById('form-title').innerHTML =
+      '<span class="bgBottom"><i class="fas fa-pen me-1"></i> Edit Schedule</span>';
+    document.getElementById('cancel-btn').style.display = '';
+    document.getElementById('s-name').focus();
+    window.scrollTo({top: document.getElementById('form-title').offsetTop - 80, behavior: 'smooth'});
+  }
+
+  function cancelEdit() {
+    document.getElementById('edit-id').value   = '';
+    document.getElementById('s-name').value    = '';
+    document.getElementById('s-cron').value    = '';
+    document.getElementById('s-seconds').value = 1800;
+    document.getElementById('s-enabled').checked = true;
+    document.getElementById('form-title').innerHTML =
+      '<span class="bgBottom"><i class="fas fa-plus me-1"></i> Add Schedule</span>';
+    document.getElementById('cancel-btn').style.display = 'none';
+    document.getElementById('sched-msg').textContent = '';
+  }
+
+  function deleteSchedule(id, name) {
+    if (!confirm('Delete schedule "' + name + '"?')) return;
+    fetch('/api/schedules/' + id, {method: 'DELETE'})
+    .then(r => r.json().then(d => ({ok: r.ok, d})))
+    .then(({ok, d}) => {
+      if (ok) {
+        var row = document.getElementById('sched-row-' + id);
+        if (row) row.remove();
+        if (!document.querySelector('#schedule-tbody tr')) {
+          var tr = document.createElement('tr');
+          tr.id = 'no-schedules-row';
+          tr.innerHTML = '<td colspan="5" class="text-muted text-center">No schedules yet.</td>';
+          document.getElementById('schedule-tbody').appendChild(tr);
+        }
+      } else {
+        alert(d.error || 'Could not delete');
+      }
+    })
+    .catch(() => alert('Request failed'));
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}Users{% endblock %}
+{% block content %}
+
+<div class="row g-3 mt-1">
+
+  <!-- ── User list ── -->
+  <div class="col-md-7">
+    <div class="mobileBg">
+      <h5 class="mb-3"><span class="bgBottom"><i class="fas fa-users me-1"></i> User Accounts</span></h5>
+      <table class="table table-sm table-striped table-hover mb-0" id="user-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Username</th>
+            <th>Created</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr id="user-row-{{ u.id }}">
+            <td class="text-muted">{{ u.id }}</td>
+            <td>
+              <i class="fas fa-user me-1 text-danger"></i>
+              {{ u.username }}
+              {% if u.id == current_user.id %}
+                <span class="badge bg-secondary ms-1">you</span>
+              {% endif %}
+            </td>
+            <td class="text-muted small">{{ u.created_at }}</td>
+            <td class="text-end">
+              {% if u.id != current_user.id %}
+              <button class="btn btn-outline-danger btn-sm"
+                      onclick="deleteUser({{ u.id }}, '{{ u.username }}')">
+                <i class="fas fa-trash-can"></i>
+              </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="text-muted text-center">No users found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Right column: Add user + Change password ── -->
+  <div class="col-md-5 d-flex flex-column gap-3">
+
+    <!-- Add user -->
+    <div class="mobileBg">
+      <h5 class="mb-3"><span class="bgBottom"><i class="fas fa-user-plus me-1"></i> Add User</span></h5>
+      <div class="mb-2">
+        <label class="form-label fw-semibold">Username</label>
+        <input type="text" id="new-username" class="form-control" placeholder="username">
+      </div>
+      <div class="mb-2">
+        <label class="form-label fw-semibold">Password</label>
+        <input type="password" id="new-password" class="form-control" placeholder="min 6 characters">
+      </div>
+      <div id="add-user-msg" class="small mb-2"></div>
+      <button class="btn btn-danger btn-sm" onclick="addUser()">
+        <i class="fas fa-plus me-1"></i> Add User
+      </button>
+    </div>
+
+    <!-- Change own password -->
+    <div class="mobileBg">
+      <h5 class="mb-3"><span class="bgBottom"><i class="fas fa-key me-1"></i> Change My Password</span></h5>
+      <div class="mb-2">
+        <label class="form-label fw-semibold">Current password</label>
+        <input type="password" id="cur-pw" class="form-control">
+      </div>
+      <div class="mb-2">
+        <label class="form-label fw-semibold">New password</label>
+        <input type="password" id="new-pw" class="form-control" placeholder="min 6 characters">
+      </div>
+      <div id="pw-msg" class="small mb-2"></div>
+      <button class="btn btn-danger btn-sm" onclick="changePassword()">
+        <i class="fas fa-floppy-disk me-1"></i> Update Password
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function msg(elId, text, ok) {
+    var el = document.getElementById(elId);
+    el.textContent = text;
+    el.className = 'small mb-2 ' + (ok ? 'text-success' : 'text-danger');
+  }
+
+  function addUser() {
+    var username = document.getElementById('new-username').value.trim();
+    var password = document.getElementById('new-password').value;
+    fetch('/api/users', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username, password})
+    })
+    .then(r => r.json().then(d => ({ok: r.ok, d})))
+    .then(({ok, d}) => {
+      if (ok) {
+        msg('add-user-msg', 'User added!', true);
+        document.getElementById('new-username').value = '';
+        document.getElementById('new-password').value = '';
+        // Add row to table
+        var tbody = document.querySelector('#user-table tbody');
+        var tr = document.createElement('tr');
+        tr.id = 'user-row-' + d.user.id;
+        tr.innerHTML = `
+          <td class="text-muted">${d.user.id}</td>
+          <td><i class="fas fa-user me-1 text-danger"></i>${d.user.username}</td>
+          <td class="text-muted small">${d.user.created_at}</td>
+          <td class="text-end">
+            <button class="btn btn-outline-danger btn-sm"
+                    onclick="deleteUser(${d.user.id}, '${d.user.username}')">
+              <i class="fas fa-trash-can"></i>
+            </button>
+          </td>`;
+        tbody.appendChild(tr);
+      } else {
+        msg('add-user-msg', d.error || 'Error adding user', false);
+      }
+    })
+    .catch(() => msg('add-user-msg', 'Request failed', false));
+  }
+
+  function deleteUser(id, name) {
+    if (!confirm('Delete user "' + name + '"?')) return;
+    fetch('/api/users/' + id, {method: 'DELETE'})
+    .then(r => r.json().then(d => ({ok: r.ok, d})))
+    .then(({ok, d}) => {
+      if (ok) {
+        var row = document.getElementById('user-row-' + id);
+        if (row) row.remove();
+      } else {
+        alert(d.error || 'Could not delete user');
+      }
+    })
+    .catch(() => alert('Request failed'));
+  }
+
+  function changePassword() {
+    var current_password = document.getElementById('cur-pw').value;
+    var new_password     = document.getElementById('new-pw').value;
+    fetch('/api/users/me/password', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({current_password, new_password})
+    })
+    .then(r => r.json().then(d => ({ok: r.ok, d})))
+    .then(({ok, d}) => {
+      if (ok) {
+        msg('pw-msg', 'Password updated!', true);
+        document.getElementById('cur-pw').value = '';
+        document.getElementById('new-pw').value = '';
+      } else {
+        msg('pw-msg', d.error || 'Error', false);
+      }
+    })
+    .catch(() => msg('pw-msg', 'Request failed', false));
+  }
+</script>
+{% endblock %}

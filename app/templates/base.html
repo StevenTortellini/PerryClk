@@ -133,7 +133,7 @@
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link {% if request.endpoint in ('ui.settings_rs485','ui.settings_time','ui.settings_network') %}menuactive{% endif %}"
+          <a class="nav-link {% if request.endpoint in ('ui.settings_rs485','ui.settings_time','ui.settings_network','ui.settings_webhook','ui.settings_schedules','ui.settings_users') %}menuactive{% endif %}"
              href="{{ url_for('ui.settings_rs485') }}">
             <i class="fas fa-gear me-1"></i>Settings
           </a>
@@ -149,6 +149,18 @@
             <li><a href="{{ url_for('ui.settings_network') }}"
                    {% if request.endpoint == 'ui.settings_network' %}style="color:#fff;font-weight:600;"{% endif %}>
               <i class="fas fa-network-wired me-1"></i>Network
+            </a></li>
+            <li><a href="{{ url_for('ui.settings_webhook') }}"
+                   {% if request.endpoint == 'ui.settings_webhook' %}style="color:#fff;font-weight:600;"{% endif %}>
+              <i class="fas fa-webhook me-1"></i>Webhook
+            </a></li>
+            <li><a href="{{ url_for('ui.settings_schedules') }}"
+                   {% if request.endpoint == 'ui.settings_schedules' %}style="color:#fff;font-weight:600;"{% endif %}>
+              <i class="fas fa-calendar-check me-1"></i>Schedules
+            </a></li>
+            <li><a href="{{ url_for('ui.settings_users') }}"
+                   {% if request.endpoint == 'ui.settings_users' %}style="color:#fff;font-weight:600;"{% endif %}>
+              <i class="fas fa-users me-1"></i>Users
             </a></li>
           </ul>
         </li>

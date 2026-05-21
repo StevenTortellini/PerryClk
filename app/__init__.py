@@ -10,6 +10,8 @@ from flask_wtf.csrf import CSRFProtect
 from .auth import login_manager
 from .config import Config
 from .db import close_db, get_setting, init_db, standalone_connection
+from .discovery import init_discovery
+from .scheduler import init_scheduler
 from .worker import init_worker
 
 
@@ -69,5 +71,13 @@ def create_app(config_class: type = Config) -> Flask:
         baud=baud,
         clock_address=address,
     )
+
+    # Discovery responder — read product name from DB
+    with standalone_connection(app.config["DATABASE_PATH"]) as conn:
+        product_name = get_setting(conn, "product_name") or "CLK-Perry"
+    init_discovery(product_name=product_name)
+
+    # Cron scheduler
+    init_scheduler(db_path=app.config["DATABASE_PATH"])
 
     return app

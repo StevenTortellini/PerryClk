@@ -103,6 +103,35 @@ def settings_network():
     return render_template("settings_network.html", settings=settings)
 
 
+@bp.get("/settings/webhook")
+@login_required
+def settings_webhook():
+    settings = _get_settings(get_db())
+    return render_template("settings_webhook.html", settings=settings)
+
+
+@bp.get("/settings/users")
+@login_required
+def settings_users():
+    db = get_db()
+    settings = _get_settings(db)
+    users = db.execute(
+        "SELECT id, username, created_at FROM users ORDER BY id"
+    ).fetchall()
+    return render_template("settings_users.html", settings=settings, users=users)
+
+
+@bp.get("/settings/schedules")
+@login_required
+def settings_schedules():
+    db = get_db()
+    settings = _get_settings(db)
+    schedules = db.execute(
+        "SELECT id, name, enabled, cron_expr, countdown_seconds FROM schedules ORDER BY id"
+    ).fetchall()
+    return render_template("settings_schedules.html", settings=settings, schedules=schedules)
+
+
 @bp.get("/events")
 @login_required
 def events():

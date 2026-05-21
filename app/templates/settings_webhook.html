@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Webhook{% endblock %}
+{% block content %}
+
+<div class="row g-3 mt-1">
+
+  <!-- ── Webhook URL & Secret ── -->
+  <div class="col-md-7">
+    <div class="mobileBg">
+      <h5 class="mb-3"><span class="bgBottom"><i class="fas fa-webhook me-1"></i> Perry Weather Webhook</span></h5>
+
+      <p class="text-muted small mb-3">
+        Configure this URL in Perry Weather as your endpoint.
+        The secret must match the key Perry uses to sign requests.
+      </p>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Webhook URL</label>
+        <div class="input-group">
+          <input type="text" class="form-control font-monospace"
+                 id="webhook-url"
+                 value="http://{{ request.host }}/webhook/perry"
+                 readonly>
+          <button class="btn btn-outline-secondary" type="button" onclick="copyUrl()">
+            <i class="fas fa-copy"></i>
+          </button>
+        </div>
+        <div class="form-text">Give this URL to Perry Weather as the POST endpoint.</div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Webhook secret</label>
+        <div class="input-group">
+          <input type="password" class="form-control font-monospace"
+                 id="webhook-secret"
+                 value="{{ settings.get('webhook_secret', '') }}"
+                 placeholder="Paste secret from Perry Weather dashboard">
+          <button class="btn btn-outline-secondary" type="button" onclick="toggleSecret()">
+            <i class="fas fa-eye" id="eye-icon"></i>
+          </button>
+        </div>
+        <div class="form-text">
+          Leave blank to disable signature verification (not recommended in production).
+        </div>
+      </div>
+
+      <div id="webhook-msg" class="small mb-2"></div>
+      <button class="btn btn-danger btn-sm" onclick="saveWebhook()">
+        <i class="fas fa-floppy-disk me-1"></i> Save
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Discovery / Product name ── -->
+  <div class="col-md-5">
+    <div class="mobileBg">
+      <h5 class="mb-3"><span class="bgBottom"><i class="fas fa-satellite-dish me-1"></i> Device Discovery</span></h5>
+      <p class="text-muted small mb-3">
+        This device responds to UDP broadcasts on port <strong>30303</strong>.
+        The product name is what appears in your Linortek app's device list.
+      </p>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Product name</label>
+        <input type="text" id="product-name" class="form-control"
+               value="{{ settings.get('product_name', 'CLK-Perry') }}"
+               placeholder="CLK-Perry">
+        <div class="form-text">Shown in the device scanner. Restart service to apply.</div>
+      </div>
+
+      <div id="disc-msg" class="small mb-2"></div>
+      <button class="btn btn-danger btn-sm" onclick="saveDiscovery()">
+        <i class="fas fa-floppy-disk me-1"></i> Save
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function webhookMsg(text, ok) {
+    var el = document.getElementById('webhook-msg');
+    el.textContent = text;
+    el.className = 'small mb-2 ' + (ok ? 'text-success' : 'text-danger');
+  }
+  function discMsg(text, ok) {
+    var el = document.getElementById('disc-msg');
+    el.textContent = text;
+    el.className = 'small mb-2 ' + (ok ? 'text-success' : 'text-danger');
+  }
+
+  function toggleSecret() {
+    var inp  = document.getElementById('webhook-secret');
+    var icon = document.getElementById('eye-icon');
+    if (inp.type === 'password') {
+      inp.type = 'text';
+      icon.className = 'fas fa-eye-slash';
+    } else {
+      inp.type = 'password';
+      icon.className = 'fas fa-eye';
+    }
+  }
+
+  function copyUrl() {
+    var val = document.getElementById('webhook-url').value;
+    navigator.clipboard.writeText(val).then(() => {
+      webhookMsg('URL copied to clipboard!', true);
+    });
+  }
+
+  function saveWebhook() {
+    var webhook_secret = document.getElementById('webhook-secret').value;
+    fetch('/api/settings/webhook', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({webhook_secret})
+    })
+    .then(r => r.json().then(d => ({ok: r.ok, d})))
+    .then(({ok, d}) => webhookMsg(ok ? 'Saved!' : (d.error || 'Error'), ok))
+    .catch(() => webhookMsg('Request failed', false));
+  }
+
+  function saveDiscovery() {
+    var product_name = document.getElementById('product-name').value.trim();
+    fetch('/api/settings/webhook', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({product_name})
+    })
+    .then(r => r.json().then(d => ({ok: r.ok, d})))
+    .then(({ok, d}) => discMsg(ok ? 'Saved! Restart service to apply.' : (d.error || 'Error'), ok))
+    .catch(() => discMsg('Request failed', false));
+  }
+</script>
+{% endblock %}
